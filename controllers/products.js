@@ -3,34 +3,39 @@ require('express-async-errors');
 const asyncWrapper = require('../middlewares/async-wrapper');
 const Utility = require('../utils/utils')
 
-const Product = require('../models/model')
+const Product = require('../models/model');
+const { query } = require('express');
 
 
-const getAllProduct = asyncWrapper(
+const getProducts = asyncWrapper(
   async (req, res) => {
     const { categoryName } = req.params;
-    let { page, limit, search,sort } = req.query;
+    let { page, limit, search, sort, select, price} = req.query;
     let restructuredSort;
 
     const filterObject = {};
 
     // Build filter object based on query params
-    if (categoryName) {
+    if(categoryName){
       filterObject.category = categoryName;
     }
     if (search) {
       filterObject.name = { $regex: search, $options: "i" }; // Case-insensitive search
     }
-    if(sort){
-      restructuredSort = sort.split(',').join(' ');
+    if (sort){
+      restructuredSort = Utility.commaSeparator(sort);
     }
+    if (price){
+      const {min,max} = Utility.convertPriceToMInAndMax(price);
+      filterObject.currentPrice = {$gte:min,$lte:max}
+    }
+
 
     // Set default values for pagination
     page = Number(page) || 1;
     limit = Number(limit) || 10;
 
     console.log(filterObject);
-    console.log(req.query);
 
     // Get the total count of matching documents
     const totalCount = await Product.countDocuments(filterObject);
@@ -40,15 +45,25 @@ const getAllProduct = asyncWrapper(
       .skip((page - 1) * limit)
       .limit(limit)
       .sort(restructuredSort||{})
+      .select(select||{})
 
     // Send the response with total count and paginated data
     res.status(200).json({
       totalItems: totalCount, // Total matching documents
       page,
+      nbPages: Math.ceil(totalCount/limit),//the number of pages
       limit,
-      itemsOnPage: products.length, // Number of items on this page
-      data: products,
+      hitsPerPage: products.length, // Number of items on this page
+      hits: products,
     });
+  }
+);
+
+// Function to get distinct categories
+const getCategories = asyncWrapper(
+  async (req, res) => {
+    const categories = await Product.distinct('category'); // gets all categories and avoids duplicate
+    res.status(200).json({ nbHITS: categories.length,hits: categories});
   }
 );
 
@@ -93,4 +108,4 @@ const deleteProduct = asyncWrapper(
   }
 );
 
-module.exports = {getAllProduct,getSingleProduct,createProduct,updateProduct,deleteProduct}
+module.exports = {getProducts,getSingleProduct,createProduct,updateProduct,deleteProduct,getCategories}
