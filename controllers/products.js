@@ -4,60 +4,83 @@ const asyncWrapper = require('../middlewares/async-wrapper');
 const Utility = require('../utils/utils')
 
 const Product = require('../models/model');
-const { query } = require('express');
 
+const getProducts = asyncWrapper(async (req, res) => {
+  const { categoryName } = req.params;
+  let { page, limit, search, sort, select, price, discount } = req.query;
+  let restructuredSort;
 
-const getProducts = asyncWrapper(
-  async (req, res) => {
-    const { categoryName } = req.params;
-    let { page, limit, search, sort, select, price} = req.query;
-    let restructuredSort;
+  const filterObject = {};
 
-    const filterObject = {};
+  // Build filter object based on query params
+  if (categoryName) {
+    filterObject.category = categoryName;
+  }
+  if (search) {
+    filterObject.name = { $regex: search, $options: "i" }; // Case-insensitive search
+  }
+  if (sort) {
+    restructuredSort = Utility.commaSeparator(sort);
+  }
+  if (select) {
+    select = Utility.commaSeparator(select);
+  }
+  if (price) {
+    const { min, max } = Utility.convertPriceToMinAndMax(price);
+    filterObject.currentPrice = { $gte: min, $lte: max };
+  }
 
-    // Build filter object based on query params
-    if(categoryName){
-      filterObject.category = categoryName;
-    }
-    if (search) {
-      filterObject.name = { $regex: search, $options: "i" }; // Case-insensitive search
-    }
-    if (sort){
-      restructuredSort = Utility.commaSeparator(sort);
-    }
-    if (price){
-      const {min,max} = Utility.convertPriceToMInAndMax(price);
-      filterObject.currentPrice = {$gte:min,$lte:max}
-    }
+  // Set default values for pagination
+  page = Number(page) || 1;
+  limit = Number(limit) || 10;
 
+  // Get the total count of matching documents
+  const totalCount = await Product.countDocuments(filterObject);
 
-    // Set default values for pagination
-    page = Number(page) || 1;
-    limit = Number(limit) || 10;
+  let products;
 
-    console.log(filterObject);
-
-    // Get the total count of matching documents
-    const totalCount = await Product.countDocuments(filterObject);
-
-    // Get the paginated data
-    const products = await Product.find(filterObject)
+  // Check if discount query parameter is provided
+  if (discount) {
+    products = await Product.aggregate([
+      {$match: {
+        ...filterObject, // Apply existing filters
+        $expr: {
+          $gte: [
+            {
+              $divide: [
+                { $subtract: ["$prevPrice", "$currentPrice"] },
+                "$prevPrice",
+              ],
+            },
+            parseFloat(discount) / 100, // Convert percentage to decimal
+          ],
+        },
+        },
+      },
+      { $sort: restructuredSort || {currentPrice: 1} },
+      { $skip: (page - 1) * limit },
+      { $limit: limit },
+      ...(select ? [{ $project: {select} }] : []), // Dynamically apply projection if select exists
+    ]);
+  } else {
+    products = await Product.find(filterObject)
       .skip((page - 1) * limit)
       .limit(limit)
-      .sort(restructuredSort||{})
-      .select(select||{})
-
-    // Send the response with total count and paginated data
-    res.status(200).json({
-      totalItems: totalCount, // Total matching documents
-      page,
-      nbPages: Math.ceil(totalCount/limit),//the number of pages
-      limit,
-      hitsPerPage: products.length, // Number of items on this page
-      hits: products,
-    });
+      .sort(restructuredSort || {})
+      .select(select || {});
   }
-);
+
+  // Send the response with total count and paginated data
+  res.status(200).json({
+    totalItems: totalCount, // Total matching documents
+    page,
+    nbPages: Math.ceil(totalCount / limit), // Total number of pages
+    limit,
+    hitsPerPage: products.length, // Number of items on this page
+    hits: products,
+  });
+});
+
 
 // Function to get distinct categories
 const getCategories = asyncWrapper(
@@ -71,17 +94,19 @@ const getCategories = asyncWrapper(
 
 const getSingleProduct = asyncWrapper(
   async(req,res)=>{
-    const {id} = req.params;
-    const products = await Product.findById(id);
+    const {id} = await req.params;
+    console.log(id)
+    const product = await Product.findById(id);
+    console.log(product)
 
     // if product with id does not exist error is thrown
-    if(!products.length){
+    if(!product.length){
       const error = new Error('No item Found');
       error.statusCode = 404;
       throw error;
     }
 
-    res.status(200).json({nhBITS: products.length, data:{products}})
+    res.status(200).json({nhBITS: product.length, data:{product}})
   }
 );
 
