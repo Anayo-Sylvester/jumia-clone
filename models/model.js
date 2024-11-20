@@ -48,13 +48,13 @@ const productSchema = new mongoose.Schema(
       required: [true, 'Current price is required']
     },
     prevPrice: {
-      type: [Number],
+      type: Number,
     },
     initialQuantity: {
       type: Number,
       required: [true, 'Quantity is required']
     },
-    quantityRemaining: {
+    AmountOrdered: {
       type: Number,
     },
   },
