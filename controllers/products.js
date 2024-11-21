@@ -7,14 +7,14 @@ const Product = require('../models/model');
 
 const getProducts = asyncWrapper(async (req, res) => {
   const { categoryName } = req.params;
-  let { page, limit, search, sort, select, price, discount } = req.query;
+  let { page, limit, search, sort, select, price, discount,brand } = req.query;
   let restructuredSort;
 
   const filterObject = {};
 
   // Build filter object based on query params
   if (categoryName) {
-    filterObject.category = categoryName;
+    filterObject.category = Utility.commaSeparator(categoryName);
   }
   if (search) {
     filterObject.name = { $regex: search, $options: "i" }; // Case-insensitive search
@@ -24,6 +24,9 @@ const getProducts = asyncWrapper(async (req, res) => {
   }
   if (select) {
     select = Utility.commaSeparator(select);
+  }
+  if (brand) {
+    filterObject.brand = Utility.commaSeparator(brand);
   }
   if (price) {
     const { min, max } = Utility.convertPriceToMinAndMax(price);
@@ -95,18 +98,20 @@ const getCategories = asyncWrapper(
 const getSingleProduct = asyncWrapper(
   async(req,res)=>{
     const {id} = await req.params;
-    console.log(id)
-    const product = await Product.findById(id);
-    console.log(product)
+    let {select} = await req.query;
+    if(select){
+      select = Utility.commaSeparator(select);
+    }
+    const product = await Product.findById(id).select(select || {});
 
     // if product with id does not exist error is thrown
-    if(!product.length){
+    if(!product){
       const error = new Error('No item Found');
       error.statusCode = 404;
       throw error;
     }
 
-    res.status(200).json({nhBITS: product.length, data:{product}})
+    res.status(200).json({nhBITS: product.length, hit:product})
   }
 );
 
