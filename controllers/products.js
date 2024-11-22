@@ -35,43 +35,58 @@ const getProducts = asyncWrapper(async (req, res) => {
 
   // Set default values for pagination
   page = Number(page) || 1;
-  limit = Number(limit) || 10;
+  limit = Number(limit) || 12;
 
   // Get the total count of matching documents
-  const totalCount = await Product.countDocuments(filterObject);
+  let totalCount;
 
   let products;
 
   // Check if discount query parameter is provided
   if (discount) {
-    products = await Product.aggregate([
-      {$match: {
-        ...filterObject, // Apply existing filters
-        $expr: {
-          $gte: [
-            {
-              $divide: [
-                { $subtract: ["$prevPrice", "$currentPrice"] },
-                "$prevPrice",
-              ],
-            },
-            parseFloat(discount) / 100, // Convert percentage to decimal
-          ],
-        },
-        },
+    const discountMatch = {
+      ...filterObject,
+      $expr: {
+        $gte: [
+          {
+            $divide: [
+              { $subtract: ["$prevPrice", "$currentPrice"] },
+              "$prevPrice",
+            ],
+          },
+          parseFloat(discount) / 100, // Convert percentage to decimal
+        ],
       },
-      { $sort: restructuredSort || {currentPrice: 1} },
-      { $skip: (page - 1) * limit },
-      { $limit: limit },
-      ...(select ? [{ $project: {select} }] : []), // Dynamically apply projection if select exists
+    };
+
+    // Calculate total count using aggregation
+    const totalAggregation = await Product.aggregate([
+      { $match: discountMatch },
+      { $count: "totalCount" },
+    ]);
+
+    totalCount = totalAggregation.length > 0 ? totalAggregation[0].totalCount : 0;
+
+    // Fetch paginated products using aggregation
+    products = await Product.aggregate([
+      { $match: discountMatch }, // Apply discount filter
+      { $sort: restructuredSort || { currentPrice: 1 } }, // Apply sorting
+      { $skip: (page - 1) * limit }, // Apply pagination skip
+      { $limit: limit }, // Apply pagination limit
+      ...(select ? [{ $project: Utility.parseProjection(select) }] : []), // Apply dynamic field selection
     ]);
   } else {
+    // Calculate total count without discount filter
+    totalCount = await Product.countDocuments(filterObject);
+
+    // Fetch paginated products using `.find()`
     products = await Product.find(filterObject)
       .skip((page - 1) * limit)
       .limit(limit)
       .sort(restructuredSort || {})
       .select(select || {});
   }
+
 
   // Send the response with total count and paginated data
   res.status(200).json({
