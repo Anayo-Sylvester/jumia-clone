@@ -21,6 +21,14 @@ const getProducts = asyncWrapper(async (req, res) => {
   }
   if (sort) {
     restructuredSort = Utility.commaSeparator(sort);
+    if(discount){
+      let sortObject = {}
+        restructuredSort.split(" ").forEach(val=>{
+          sortObject[val] = 1;
+        })
+      restructuredSort = sortObject;
+    }
+    console.log(restructuredSort )
   }
   if (select) {
     select = Utility.commaSeparator(select);
