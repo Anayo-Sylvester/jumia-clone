@@ -22,7 +22,7 @@ class Utils {
     console.log(word)
   }
 
-  convertPriceToMInAndMax(price){
+  convertPriceToMinAndMax(price){
     const [min,max] = price.split("-");
     return {min:Number(min),max:Number(max)}
 
