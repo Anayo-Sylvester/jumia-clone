@@ -34,6 +34,9 @@ app.use(express.json())
 
 
 //routes
+app.get('/',(req,res)=>{
+  res.send('jumia clone api')
+})
 app.use('/api/v1/products',productsRoutes);
 app.use('/api/v1/auth',authRoutes);
 app.use('/api/v1/cart',Authenticator,cartRoutes);
