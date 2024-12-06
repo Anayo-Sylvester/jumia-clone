@@ -42,7 +42,7 @@ userSchema.methods.generateJWT = function (){
   const payload = {
     id: this.id
   }
-  const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "10h" });
+  const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: process.env.JWT_TTL });
   return token;
 }
 
