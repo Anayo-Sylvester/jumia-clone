@@ -2,8 +2,7 @@ require('express-async-errors');
 
 const asyncWrapper = require('../middlewares/async-wrapper');
 const Utility = require('../utils/utils')
-
-const Product = require('../models/products');
+const Product = require('../models/Products');
 const error = require('../errors/index');
 
 const getProducts = asyncWrapper(async (req, res) => {
