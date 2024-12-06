@@ -3,11 +3,12 @@ require('express-async-errors');
 const asyncWrapper = require('../middlewares/async-wrapper');
 const Utility = require('../utils/utils')
 
-const Product = require('../models/model');
+const Product = require('../models/products');
+const error = require('../errors/index');
 
 const getProducts = asyncWrapper(async (req, res) => {
   const { categoryName } = req.params;
-  let { page, limit, search, sort, select, price, discount,brand } = req.query;
+  let { page, limit, search, sort, select, priceRange, discount,brand } = req.query;
   let restructuredSort;
 
   const filterObject = {};
@@ -35,20 +36,23 @@ const getProducts = asyncWrapper(async (req, res) => {
   }
   if (brand) {
     filterObject.brand = Utility.commaSeparator(brand);
-  }
-  if (price) {
-    const { min, max } = Utility.convertPriceToMinAndMax(price);
-    filterObject.currentPrice = { $gte: min, $lte: max };
+  }//NOTE: priceRange should be in Naira so it is converted to kobo and processed!!!
+  if (priceRange) {
+    const { min, max } = Utility.convertPriceToMinAndMax(priceRange);
+    filterObject.currentPrice = { $gte: min*100, $lte: max*100 };
+    console.log(filterObject)
   }
 
   // Set default values for pagination
   page = Number(page) || 1;
   limit = Number(limit) || 12;
 
-  // Get the total count of matching documents
+  // Get the total count of matching documents, min & max price of grouped products, variable to store product data
   let totalCount;
-
   let products;
+  let minPrice;
+  let maxPrice;
+  let priceAggregation;
 
   // Check if discount query parameter is provided
   if (discount) {
@@ -75,6 +79,22 @@ const getProducts = asyncWrapper(async (req, res) => {
 
     totalCount = totalAggregation.length > 0 ? totalAggregation[0].totalCount : 0;
 
+    priceAggregation = await Product.aggregate([
+      {$match: discountMatch},
+      {
+        $group:{
+          _id: null,
+          maxPrice: {$max:"$currentPrice"},
+          minPrice: {$min: '$currentPrice'}
+        }
+      } 
+    ])
+
+    if (priceAggregation.length > 0) {
+      minPrice = priceAggregation[0].minPrice;
+      maxPrice = priceAggregation[0].maxPrice;
+    }
+
     // Fetch paginated products using aggregation
     products = await Product.aggregate([
       { $match: discountMatch }, // Apply discount filter
@@ -83,7 +103,11 @@ const getProducts = asyncWrapper(async (req, res) => {
       { $limit: limit }, // Apply pagination limit
       ...(select ? [{ $project: Utility.parseProjection(select) }] : []), // Apply dynamic field selection
     ]);
+
+
   } else {
+
+
     // Calculate total count without discount filter
     totalCount = await Product.countDocuments(filterObject);
 
@@ -93,8 +117,25 @@ const getProducts = asyncWrapper(async (req, res) => {
       .limit(limit)
       .sort(restructuredSort || {})
       .select(select || {});
+
+    
+      priceAggregation = await Product.aggregate([
+        {$match: filterObject},
+        {
+          $group:{
+            _id: null,
+            maxPrice: {$max:"$currentPrice"},
+            minPrice: {$min: '$currentPrice'}
+          }
+        } 
+      ])
   }
 
+
+  if (priceAggregation.length > 0) {
+    minPrice = priceAggregation[0].minPrice;
+    maxPrice = priceAggregation[0].maxPrice;
+  }
 
   // Send the response with total count and paginated data
   res.status(200).json({
@@ -104,6 +145,8 @@ const getProducts = asyncWrapper(async (req, res) => {
     limit,
     hitsPerPage: products.length, // Number of items on this page
     hits: products,
+    minPrice,
+    maxPrice,
   });
 });
 
@@ -112,6 +155,7 @@ const getProducts = asyncWrapper(async (req, res) => {
 const getCategories = asyncWrapper(
   async (req, res) => {
     const categories = await Product.distinct('category'); // gets all categories and avoids duplicate
+    !categories && error.notFoundError(`Category not found`);
     res.status(200).json({ nbHITS: categories.length,hits: categories});
   }
 );
@@ -129,9 +173,7 @@ const getSingleProduct = asyncWrapper(
 
     // if product with id does not exist error is thrown
     if(!product){
-      const error = new Error('No item Found');
-      error.statusCode = 404;
-      throw error;
+      error.notFoundError(`Item not found with id: ${id}`)
     }
 
     res.status(200).json({nhBITS: product.length, hit:product})

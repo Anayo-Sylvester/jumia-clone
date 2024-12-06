@@ -19,7 +19,6 @@ class Utils {
   //replace string with "-" with " "
   hyphenSeparator(word){
     word = word.replace(/-/g," ");
-    console.log(word)
   }
 
   convertPriceToMinAndMax(price){
