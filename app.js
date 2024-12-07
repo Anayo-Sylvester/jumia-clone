@@ -16,6 +16,10 @@ const cors = require('cors');
 const helmet = require('helmet');
 const {rateLimit} = require('express-rate-limit');
 
+const swaggerUi = require('swagger-ui-express');
+const Yaml = require('yamljs');
+const swaggerDocument = YAML.load('./swagger.yaml');
+
 const port = process.env.PORT||5000;
 require('dotenv').config();
 
@@ -37,8 +41,9 @@ app.use(express.json())
 
 //routes
 app.get('/',(req,res)=>{
-  res.send('jumia clone api')
+  res.send('<h1>jumia clone api</h1><a href="/api-docs>Documentation</a>')
 })
+app.use('/api-docs',swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use('/api/v1/products',productsRoutes);
 app.use('/api/v1/auth',authRoutes);
 app.use('/api/v1/cart',Authenticator,cartRoutes);
