@@ -23,7 +23,7 @@ const port = process.env.PORT||5000;
 require('dotenv').config();
 
 //middlewares
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 
 app.use(cors()); // Enable CORS for all routes and origins
 app.use(helmet());
