@@ -1,3 +1,19 @@
+/**
+ * Retrieves a list of products based on the provided query parameters.
+ *
+ * @param {Object} req - The Express request object.
+ * @param {string} req.params.categoryName - The name of the category to filter products by.
+ * @param {string} [req.query.page] - The page number for pagination (default is 1).
+ * @param {string} [req.query.limit] - The number of products to return per page (default is 12).
+ * @param {string} [req.query.search] - The search term to filter products by name.
+ * @param {string} [req.query.sort] - The field(s) to sort the products by, separated by commas.
+ * @param {string} [req.query.select] - The fields to include in the product response, separated by commas.
+ * @param {string} [req.query.priceRange] - The price range to filter products by.
+ * @param {string} [req.query.discount] - The minimum discount percentage to filter products by.
+ * @param {string} [req.query.brand] - The brand(s) to filter products by, separated by commas.
+ * @param {Object} res - The Express response object.
+ * @returns {Promise<void>} - A Promise that resolves when the response is sent.
+ */
 require('express-async-errors');
 
 const asyncWrapper = require('../middlewares/async-wrapper');

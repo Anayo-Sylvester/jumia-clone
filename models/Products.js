@@ -1,16 +1,32 @@
+/**
+ * Defines the schema for a product document in the MongoDB database.
+ * 
+ * The schema includes the following fields:
+ * - name: The name of the product (required)
+ * - description: A description of the product (default is an empty string)
+ * - image: The URL of the product image (required)
+ * - brand: The brand of the product (default is undefined)
+ * - category: The category of the product (required, must be one of the allowed categories)
+ * - currentPrice: The current price of the product (required)
+ * - prevPrice: The previous price of the product
+ * - initialQuantity: The initial quantity of the product (required)
+ * - AmountOrdered: The amount of the product that has been ordered
+ * 
+ * The schema also includes timestamps for when the product was created and updated.
+ */
 const mongoose = require('mongoose');
 
 const categories = [
-  'appliances',//
-  'phones & tablets',//
-  'health & beauty',//
-  'home & office',//
-  'electronics',//
-  'fashion',//
-  'computing',//
-  'baby products',//
-  'gaming',//
-  'musical instruments', //
+  'appliances',
+  'phones & tablets',
+  'health & beauty',
+  'home & office',
+  'electronics',
+  'fashion',
+  'computing',
+  'baby products',
+  'gaming',
+  'musical instruments', 
   "generators & portable power",
 ];
 

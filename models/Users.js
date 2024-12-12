@@ -1,3 +1,17 @@
+/**
+ * Defines the User schema and model for the application.
+ * 
+ * The User schema includes the following fields:
+ * - `username`: A required string field representing the user's username, with a minimum length of 3 characters and a maximum length of 30 characters.
+ * - `email`: A required string field representing the user's email address, with a minimum length of 3 characters, a maximum length of 254 characters, and a valid email format. The email field is also set to be unique.
+ * - `password`: A required string field representing the user's password, with a minimum length of 8 characters and a requirement to contain at least one letter, one number, and one special character.
+ * 
+ * The schema also includes the following methods:
+ * - `generateJWT()`: A method that generates a JSON Web Token (JWT) for the user, using the user's ID as the payload and the JWT_SECRET and JWT_TTL environment variables for the signing and expiration, respectively.
+ * - `validatePassword(inputtedPassword)`: A method that compares the inputted password with the user's encrypted password and returns a boolean indicating whether the passwords match.
+ * 
+ * The schema also includes a pre-save hook that encrypts the user's password using bcrypt before saving the user to the database.
+ */
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken')
 const bcrypt = require('bcryptjs')

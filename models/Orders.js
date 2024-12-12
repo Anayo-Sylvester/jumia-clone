@@ -1,3 +1,16 @@
+/**
+ * Defines the schema for an Order document in the MongoDB database.
+ * 
+ * An Order document represents a customer's order and contains the following fields:
+ * - `createdBy`: The ID of the user who placed the order.
+ * - `items`: An array of objects representing the products in the order, including the product ID, quantity, and price.
+ * - `totalAmount`: The total amount of the order.
+ * - `orderStatus`: The current status of the order (Pending, Paid, Shipped, Delivered, or Canceled).
+ * - `paymentDetails`: An object containing the payment method and payment status.
+ * - `shippingAddress`: An object containing the shipping address details.
+ * 
+ * The schema also includes timestamps for when the order was created and updated.
+ */
 const { default: mongoose } = require("mongoose");
 
 const orderSchema = new mongoose.Schema({
