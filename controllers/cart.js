@@ -10,6 +10,7 @@ const asyncWrapper = require('../middlewares/async-wrapper');
 const cart = require('../models/Cart');
 const error = require('../errors/index');
 const { StatusCodes } = require('http-status-codes');
+const mongoose = require('mongoose');
 
 /**
  * Retrieves the items in the user's shopping cart.
@@ -20,13 +21,56 @@ const { StatusCodes } = require('http-status-codes');
  * @param {Object} res - The Express response object.
  * @returns {Promise<void>} - Sends a JSON response with the cart items and the number of hits.
  */
-const getItems = asyncWrapper(
-  async(req,res)=>{
-    const id = res.user;
-    const items = await cart.find({createdBy:id})
-    res.status(StatusCodes.OK).json({Hits: items, nbHits: items.length});
-  }
-);
+
+const getItems = asyncWrapper(async (req, res) => {
+  const id = res.user; // Retrieve user ID from response object
+  const userId = new mongoose.Types.ObjectId(`${id}`); // Convert user ID to string to remove depreciated warning since it happens when id is number then converts to ObjectId
+  
+  // Use aggregation to join cart items with their respective product details
+  const items = await cart.aggregate([
+    {
+      $match: { createdBy: userId } // Filter by user ID
+    },
+    {
+      $lookup: {
+        from: "products", // Name of the product collection
+        let: { productId: { $toObjectId: "$productId" } }, // Convert productId to ObjectId
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$_id", "$$productId"] } // Match converted productId with _id in products
+            }
+          }
+        ],
+        as: "productDetails" // Output array field for joined data
+      }
+    },
+    {
+      $unwind: "$productDetails" // Flatten the joined array to simplify access
+    },
+    {
+      $project: {
+        _id: 1, // Include cart item ID
+        productId: 1, // Include product ID
+        quantity: 1, // Include cart quantity
+        "productDetails.name": 1, // Include product name
+        "productDetails.currentPrice": 1, // Include product price
+        "productDetails.image": 1, // Include product image
+        instock: {
+          $gt: [
+            { $subtract: ["$productDetails.initialQuantity", "$productDetails.AmountOrdered"] },
+            0
+          ]
+        }
+      }
+    }
+  ]);
+
+  console.log({ id, items });
+  res.status(StatusCodes.OK).json({ Hits: items, nbHits: items.length });
+});
+
+
 
 /**
  * Creates a new item in the user's shopping cart.
