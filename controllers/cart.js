@@ -70,8 +70,14 @@ const getItems = asyncWrapper(async (req, res) => {
   res.status(StatusCodes.OK).json({ Hits: items, nbHits: items.length });
 });
 
-
-
+const checkIfItemExist = asyncWrapper(
+  async(req,res)=>{
+    const {id:productId} = req.params;
+    const id = res.user;
+    const item = await cart.findOne({productId,createdBy:id});
+    item ? res.status(StatusCodes.NO_CONTENT).send('') : res.status(StatusCodes.NOT_FOUND).send('');
+  }
+)
 /**
  * Creates a new item in the user's shopping cart.
  *
@@ -132,4 +138,4 @@ const updateItem = asyncWrapper(
   }
 );
 
-module.exports = {createItem,deleteItem,updateItem,getItems};
+module.exports = {createItem,deleteItem,updateItem,getItems,checkIfItemExist};
