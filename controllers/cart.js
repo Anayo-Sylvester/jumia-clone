@@ -66,7 +66,6 @@ const getItems = asyncWrapper(async (req, res) => {
     }
   ]);
 
-  console.log({ id, items });
   res.status(StatusCodes.OK).json({ Hits: items, nbHits: items.length });
 });
 
@@ -108,7 +107,7 @@ const createItem = asyncWrapper(
 const deleteItem = asyncWrapper(
   async(req,res)=>{
     const {id: itemId} = req.params
-    const isDeleted = await cart.findByIdAndDelete(itemId);
+    const isDeleted = await cart.findOneAndDelete({productId:itemId});
     !isDeleted && error.notFoundError(`No Item with id:${itemId} found`);
     res.status(StatusCodes.OK).send();
   }
