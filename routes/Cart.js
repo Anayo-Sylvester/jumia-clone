@@ -1,5 +1,5 @@
 /**
- * Defines the routes for managing items in a shopping cart.
+ * Defines the routes for managing items in a shopping cart./
  * 
  * @route GET /cart
  * @route POST /cart
