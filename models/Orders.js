@@ -13,6 +13,14 @@
  */
 const { default: mongoose } = require("mongoose");
 
+const VALID_NIGERIAN_STATES = [
+  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 
+  'Borno', 'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT',
+  'Gombe', 'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi',
+  'Kwara', 'Lagos', 'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo',
+  'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara'
+];
+
 const orderSchema = new mongoose.Schema({
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -40,32 +48,6 @@ const orderSchema = new mongoose.Schema({
     required: [true, 'Total amount is required'],
     min: [0, 'Total amount cannot be negative'],
   },
-  orderStatus: {
-    type: String,
-    enum: {
-      values: ['Pending', 'Paid', 'Shipped', 'Delivered', 'Canceled'],
-      message: 'Order status must be one of Pending, Paid, Shipped, Delivered, or Canceled',
-    },
-    default: 'Pending',
-  },
-  paymentDetails: {
-    method: {
-      type: String,
-      enum: {
-        values: ['Credit Card', 'Debit Card', 'PayPal', 'Bank Transfer', 'Other'],
-        message: 'Payment method must be one of Credit Card, Debit Card, PayPal, Bank Transfer, or Other',
-      },
-      required: [true, 'Payment method is required'],
-    },
-    paymentStatus: {
-      type: String,
-      enum: {
-        values: ['Pending', 'Completed', 'Failed', 'Refunded'],
-        message: 'Payment status must be one of Pending, Completed, Failed, or Refunded',
-      },
-      default: 'Pending',
-    },
-  },
   shippingAddress: {
     street: {
       type: String,
@@ -82,15 +64,11 @@ const orderSchema = new mongoose.Schema({
     state: {
       type: String,
       required: [true, 'State is required'],
-      minlength: [2, 'State name must be at least 2 characters'],
-      maxlength: [50, 'State name cannot exceed 50 characters'],
-    },
-    country: {
-      type: String,
-      required: [true, 'Country is required'],
-      minlength: [2, 'Country name must be at least 2 characters'],
-      maxlength: [50, 'Country name cannot exceed 50 characters'],
-    },
+      enum: {
+        values: VALID_NIGERIAN_STATES,
+        message: '{VALUE} is not a valid Nigerian state. Please enter a valid Nigerian state or FCT.'
+      }
+    }
   },
 }, { timestamps: true });
 

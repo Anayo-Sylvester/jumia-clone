@@ -1,6 +1,7 @@
 const { StatusCodes } = require("http-status-codes");
 const asyncWrapper = require("../middlewares/async-wrapper");
 const Order = require('../models/Orders');
+const Cart = require('../models/Cart');
 const error = require("../errors/index");
 
 /**
@@ -23,26 +24,42 @@ const error = require("../errors/index");
  * @param {Object} res.user - The user who created the order.
  * @returns {Object} - The created order.
  */
+
 const createOrder = asyncWrapper(async (req, res) => {
   const {
-    items, // Array of items
+    items,
     totalAmount,
-    orderStatus,
-    paymentDetails: { method, paymentStatus },
-    shippingAddress: { street, city, state, country },
+    shippingAddress: { street, city, state },
   } = req.body;
 
   const data = {
     items,
     totalAmount,
-    orderStatus,
-    paymentDetails: { method, paymentStatus },
-    shippingAddress: { street, city, state, country },
-    createdBy: res.user, // Set the user as the creator of the order
+    shippingAddress: { street, city, state},
+    createdBy: res.user,
   };
 
-  const newOrder = await Order.create(data);
-  res.status(StatusCodes.CREATED).json({ order: newOrder });
+  try {
+    const newOrder = await Order.create(data);
+    
+    // Only delete cart items if order creation was successful
+    try {
+      await Cart.deleteMany({ createdBy: res.user });
+      res.status(StatusCodes.CREATED).json({ 
+        order: newOrder,
+        message: 'Order created and cart items cleared successfully'
+      });
+    } catch (error) {
+      // Order created but cart items not deleted
+      res.status(StatusCodes.CREATED).json({ 
+        order: newOrder,
+        message: 'Order created but cart items could not be cleared',
+        warning: 'Cart items deletion failed'
+      });
+    }
+  } catch (error) {
+    throw new error.BadRequestError('Failed to create order');
+  }
 });
 
 /**
@@ -55,11 +72,26 @@ const createOrder = asyncWrapper(async (req, res) => {
  */
 const getOrders = asyncWrapper(async (req, res) => {
   const userId = res.user;
-  const orders = await Order.find({ createdBy: userId });
+  const orders = await Order.find({ createdBy: userId })
+    .populate({
+      path: 'items.productId',
+      select: 'name image', // Get product details we need
+      model: 'Product'
+    });
+
+  // Format orders to include product image
+  const formattedOrders = orders.map(order => ({
+    ...order.toObject(),
+    items: order.items.map(item => ({
+      ...item,
+      productImage: item.productId.image,
+      productName: item.productId.name,
+    }))
+  }));
 
   res.status(StatusCodes.OK).json({
-    orders,
-    totalOrders: orders.length,
+    Hits: formattedOrders,
+    nbHits: orders.length,
   });
 });
 
